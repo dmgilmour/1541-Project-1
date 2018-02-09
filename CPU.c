@@ -121,7 +121,7 @@ int main(int argc, char **argv)
 
 
   //loop while there are still instructions left
-  int instr_left = 7;
+  int instr_left = 8;
   while(instr_left){
   	cycle_number++; //increase the cycle number
 
@@ -135,20 +135,64 @@ int main(int argc, char **argv)
   	//TODO: some branch detection shit. lots of loops and conditions
 
 
+    //detect structural hazards
+    //dectects if wb is used
+    //NOTE NOT SURE IF WE NEED TO CHECK MORE TYPES LIKE ITYPE AND SPECIAL
+    if(wb_stage.type == ti_LOAD || wb_stage.type == ti_RTYPE || wb_stage.type == ti_ITYPE){
+        
+        //if rd at wb_stage == rs or rt at id_stage
+        if(wb_stage.dReg == id_stage.sReg_a || wb_stage.dReg == id_stage.sReg_b){
+            hazard = 1;
+        }
+    }
+    
+    //detect data hazards
+    
+    
+    
+    //detect control hazards
+
 
 
   	//hazard switching
   	switch(hazard){
   		case 0: //no hazard
   			//TODO
+  			wb_stage = mem2_stage;
+  			mem2_stage = mem1_stage;
+  			mem1_stage = ex_stage;
+  			ex_stage = id_stage;
+  			id_stage = if2_stage;
+  			if2_stage = if1_stage;
+  			if1_stage = new_instr;
+  			if (instr_left >= 8) {
+  			    int is_done = trace_get_item(&new_instr);
+      			if (is_done == 0) {
+      			    instr_left -= 1;
+      			    set_intsr_to_noop(new_instr);
+      			}
+  			} else {
+  			    instr_left -= 1;
+  			    set_intsr_to_noop(new_instr);
+  			}
   			break;
 
   		case 1: //structural hazard
-  			//TODO
+  			//move up ex, mem1, mem2, and wb
+  			//dont change if1, if2, and id, and don't fetch a new instruction
+			wb_stage = mem2_stage;
+  			mem2_stage = mem1_stage;
+  			mem1_stage = ex_stage;
+  			set_instr_to_noop(ex_stage);
   			break;
 
   		case 2: //data hazard
-  			//TODO
+			wb_stage = mem2_stage;
+  			mem2_stage = mem1_stage;
+  			mem1_stage = ex_stage;
+  			set_instr_to_noop(ex_stage);
+  			//do we have to implement our own forwarding??
+  			//set id_stage.reg = ex_stage.reg
   			break;
 
   		case 3: //control hazard
@@ -159,6 +203,12 @@ int main(int argc, char **argv)
   			break;
 
   	}
+  	
+  	// track left in pipeline with is_done funciton telling if there are instructions left to pull
+  	// Don't need to keep
+  	
+  	if instr_left < 7:
+  	 stop pulling instr
 
 
 
