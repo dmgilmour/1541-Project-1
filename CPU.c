@@ -50,8 +50,8 @@ print_finished_instr(struct trace_item* instr, int cycle_number){
 }
 
 //sets an instruction to a no-op
-void set_intsr_to_noop(struct trace_item* instruction){
-	memset(instruction, 0, sizeof(struct trace_item));
+void set_instr_to_noop(struct trace_item* instruction){
+	instruction->type = ti_NOP;
 }
 
 int main(int argc, char **argv)
@@ -99,23 +99,23 @@ int main(int argc, char **argv)
   //do the trace stuff
 
   //pipeline instructions
-  struct trace_item new_instr; //reads what will be next
-  struct trace_item if1_stage;
-  struct trace_item if2_stage;
-  struct trace_item id_stage;
-  struct trace_item ex_stage;
-  struct trace_item mem1_stage;
-  struct trace_item mem2_stage;
-  struct trace_item wb_stage;
+  struct trace_item *new_instr; //reads what will be next
+  struct trace_item *if1_stage;
+  struct trace_item *if2_stage;
+  struct trace_item *id_stage;
+  struct trace_item *ex_stage;
+  struct trace_item *mem1_stage;
+  struct trace_item *mem2_stage;
+  struct trace_item *wb_stage;
   //initialize the stages to no-ops
-  set_intsr_to_noop(&new_instr);
-  set_intsr_to_noop(&if1_stage);
-  set_intsr_to_noop(&if2_stage);
-  set_intsr_to_noop(&id_stage);
-  set_intsr_to_noop(&ex_stage);
-  set_intsr_to_noop(&mem1_stage);
-  set_intsr_to_noop(&mem2_stage);
-  set_intsr_to_noop(&wb_stage);
+  set_instr_to_noop(new_instr);
+  set_instr_to_noop(if1_stage);
+  set_instr_to_noop(if2_stage);
+  set_instr_to_noop(id_stage);
+  set_instr_to_noop(ex_stage);
+  set_instr_to_noop(mem1_stage);
+  set_instr_to_noop(mem2_stage);
+  set_instr_to_noop(wb_stage);
 
   int hazard = 0; //initializes a no hazard state. will change based on branch detection and stuff
 
@@ -130,7 +130,7 @@ int main(int argc, char **argv)
 
   	if(trace_view_on){
   		//sends the stage and cycle number of each wb stage that has finished
-  		print_finished_instr(&wb_stage, cycle_number);
+  		print_finished_instr(wb_stage, cycle_number);
   	}
 
   	
@@ -140,23 +140,23 @@ int main(int argc, char **argv)
     //detect structural hazards
     //dectects if wb is used
     //NOTE NOT SURE IF WE NEED TO CHECK MORE TYPES LIKE ITYPE AND SPECIAL
-    if(wb_stage.type == ti_LOAD || wb_stage.type == ti_RTYPE || wb_stage.type == ti_ITYPE){
+    if(wb_stage->type == ti_LOAD || wb_stage->type == ti_RTYPE || wb_stage->type == ti_ITYPE){
         
         //if rd at wb_stage == rs or rt at id_stage
-        if(wb_stage.dReg == id_stage.sReg_a || wb_stage.dReg == id_stage.sReg_b){
+        if(wb_stage->dReg == id_stage->sReg_a || wb_stage->dReg == id_stage->sReg_b){
             hazard = 1;
         }
     }
     
     //detect data hazards
-    if(ex_stage.type == ti_LOAD && (ex_stage.dReg == id_stage.sReg_a || ex_stage.dReg == id_stage.sReg_b)){
+    if(ex_stage->type == ti_LOAD && (ex_stage->dReg == id_stage->sReg_a || ex_stage->dReg == id_stage->sReg_b)){
     	hazard = 2;
     }
     
     
     
     //detect control hazards
-    if(ex_stage.type == ti_JTYPE || ex_stage.type == ti_BRANCH){
+    if(ex_stage->type == ti_JTYPE || ex_stage->type == ti_BRANCH){
     	hazard = 3;
     }
 
@@ -174,14 +174,14 @@ int main(int argc, char **argv)
   			if2_stage = if1_stage;
   			if1_stage = new_instr;
   			if (instr_left >= 8) {
-  			    int is_done = trace_get_item(&&new_instr);
+  			    int is_done = trace_get_item(&new_instr);
       			if (is_done == 0) {
       			    instr_left -= 1;
-      			    set_intsr_to_noop(&new_instr);
+      			    set_instr_to_noop(new_instr);
       			}
   			} else {
   			    instr_left -= 1;
-  			    set_intsr_to_noop(&new_instr);
+  			    set_instr_to_noop(new_instr);
   			}
   			break;
 
@@ -191,23 +191,23 @@ int main(int argc, char **argv)
 			wb_stage = mem2_stage;
   			mem2_stage = mem1_stage;
   			mem1_stage = ex_stage;
-  			set_instr_to_noop(&ex_stage);
+  			set_instr_to_noop(ex_stage);
   			break;
 
   		case 2: //data hazard
 			wb_stage = mem2_stage;
   			mem2_stage = mem1_stage;
   			mem1_stage = ex_stage;
-  			set_instr_to_noop(&ex_stage);
+  			set_instr_to_noop(ex_stage);
   			//do we have to implement our own forwarding??
   			//set id_stage.reg = ex_stage.reg
   			break;
 
   		case 3: //control hazard
   			//flush IF1, IF2, and ID
-  			set_intsr_to_noop(&if1_stage);
-  			set_intsr_to_noop(&if2_stage);
-  			set_intsr_to_noop(&id_stage);
+  			set_instr_to_noop(if1_stage);
+  			set_instr_to_noop(if2_stage);
+  			set_instr_to_noop(id_stage);
   			break;
 
   	}
