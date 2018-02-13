@@ -51,7 +51,8 @@ print_finished_instr(struct trace_item* instr, int cycle_number){
 
 //sets an instruction to a no-op
 void set_instr_to_noop(struct trace_item* instruction){
-	instruction->type = ti_NOP;
+	memset(instruction, 0, sizeof(struct trace_item));
+//	instruction->type = ti_NOP;
 }
 
 int main(int argc, char **argv)
