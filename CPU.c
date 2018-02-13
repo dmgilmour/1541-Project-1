@@ -10,6 +10,8 @@
 #include <arpa/inet.h>
 #include "CPU.h" 
 
+
+
 print_finished_instr(struct trace_item* instr, int cycle_number){
 	switch(instr->type) {
         case ti_NOP:
@@ -51,7 +53,8 @@ print_finished_instr(struct trace_item* instr, int cycle_number){
 
 //sets an instruction to a no-op
 void set_instr_to_noop(struct trace_item* instruction){
-	memset(instruction, 0, sizeof(struct trace_item));
+	instruction = malloc(sizeof(struct trace_item));
+	//memset(instruction, 0, sizeof(struct trace_item));
 //	instruction->type = ti_NOP;
 }
 
@@ -85,7 +88,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "\n(branch_prediction) 0 - no branch prediction, 1 - one bit branch prediction, 2 - two bit branch prediction \n\n");
     exit(0);
   }
-    
+  
 
   //open the trace file designated
   fprintf(stdout, "\n ** opening file %s\n", trace_file_name);
@@ -99,16 +102,35 @@ int main(int argc, char **argv)
 
   //do the trace stuff
 
+  printf("ayyo\n");
+  struct trace_item *foobar;
+  foobar = malloc(sizeof(struct trace_item));
+  printf("ayyyo\n");
+  trace_get_item(&foobar);
+  printf("ayyyyo\n");
+  print_finished_instr(foobar, cycle_number);
+  printf("ayyyyyo\n");	
+
   //pipeline instructions
+  fprintf(stdout, "define the stages\n");
   struct trace_item *new_instr; //reads what will be next
+  new_instr = malloc(sizeof(struct trace_item));
   struct trace_item *if1_stage;
+  if1_stage = malloc(sizeof(struct trace_item));
   struct trace_item *if2_stage;
+  if2_stage = malloc(sizeof(struct trace_item));
   struct trace_item *id_stage;
+  id_stage = malloc(sizeof(struct trace_item));
   struct trace_item *ex_stage;
+  ex_stage = malloc(sizeof(struct trace_item));
   struct trace_item *mem1_stage;
+  mem1_stage = malloc(sizeof(struct trace_item));
   struct trace_item *mem2_stage;
+  mem2_stage = malloc(sizeof(struct trace_item));
   struct trace_item *wb_stage;
+  wb_stage = malloc(sizeof(struct trace_item));
   //initialize the stages to no-ops
+  fprintf(stdout, "initialize the stages\n");
   set_instr_to_noop(new_instr);
   set_instr_to_noop(if1_stage);
   set_instr_to_noop(if2_stage);
@@ -117,6 +139,7 @@ int main(int argc, char **argv)
   set_instr_to_noop(mem1_stage);
   set_instr_to_noop(mem2_stage);
   set_instr_to_noop(wb_stage);
+  fprintf(stdout, "end of the initialization\n");
 
   int hazard = 0; //initializes a no hazard state. will change based on branch detection and stuff
 
@@ -127,10 +150,12 @@ int main(int argc, char **argv)
   //loop while there are still instructions left
   int instr_left = 8;
   while(instr_left){
+  	fprintf(stdout, "cycle number: %d", cycle_number);
   	cycle_number++; //increase the cycle number
 
   	if(trace_view_on){
   		//sends the stage and cycle number of each wb stage that has finished
+  		fprintf(stdout, "\nprint the finished instruction \n");
   		print_finished_instr(wb_stage, cycle_number);
   	}
 
@@ -146,12 +171,15 @@ int main(int argc, char **argv)
         //if rd at wb_stage == rs or rt at id_stage
         if(wb_stage->dReg == id_stage->sReg_a || wb_stage->dReg == id_stage->sReg_b){
             hazard = 1;
+            fprintf(stdout, "\nstructural hazard detected \n");
         }
     }
     
     //detect data hazards
     if(ex_stage->type == ti_LOAD && (ex_stage->dReg == id_stage->sReg_a || ex_stage->dReg == id_stage->sReg_b)){
     	hazard = 2;
+    	fprintf(stdout, "\ndata hazard detected \n");
+
     }
     
     
@@ -159,6 +187,8 @@ int main(int argc, char **argv)
     //detect control hazards
     if(ex_stage->type == ti_JTYPE || ex_stage->type == ti_BRANCH){
     	hazard = 3;
+    	fprintf(stdout, "\ncontrol hazard detected \n");
+
     }
 
 
