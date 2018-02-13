@@ -117,6 +117,9 @@ int main(int argc, char **argv)
   set_intsr_to_noop(&mem2_stage);
   set_intsr_to_noop(&wb_stage);
 
+  int hazard = 0; //initializes a no hazard state. will change based on branch detection and stuff
+
+
   //TODO do we need branch table stuff????? if so initialize here I guess
 
 
@@ -130,8 +133,7 @@ int main(int argc, char **argv)
   		print_finished_instr(&wb_stage, cycle_number);
   	}
 
-  	int hazard = 0; //initializes a no hazard state. will change based on branch detection and stuff
-
+  	
   	//TODO: some branch detection shit. lots of loops and conditions
 
 
@@ -147,10 +149,16 @@ int main(int argc, char **argv)
     }
     
     //detect data hazards
+    if(ex_stage.type == ti_LOAD && (ex_stage.dReg == id_stage.sReg_a || ex_stage.dReg == id_stage.sReg_b)){
+    	hazard = 2;
+    }
     
     
     
     //detect control hazards
+    if(ex_stage.type == ti_JTYPE || ex_stage.type == ti_BRANCH){
+    	hazard = 3;
+    }
 
 
 
@@ -166,14 +174,14 @@ int main(int argc, char **argv)
   			if2_stage = if1_stage;
   			if1_stage = new_instr;
   			if (instr_left >= 8) {
-  			    int is_done = trace_get_item(&new_instr);
+  			    int is_done = trace_get_item(&&new_instr);
       			if (is_done == 0) {
       			    instr_left -= 1;
-      			    set_intsr_to_noop(new_instr);
+      			    set_intsr_to_noop(&new_instr);
       			}
   			} else {
   			    instr_left -= 1;
-  			    set_intsr_to_noop(new_instr);
+  			    set_intsr_to_noop(&new_instr);
   			}
   			break;
 
@@ -183,14 +191,14 @@ int main(int argc, char **argv)
 			wb_stage = mem2_stage;
   			mem2_stage = mem1_stage;
   			mem1_stage = ex_stage;
-  			set_instr_to_noop(ex_stage);
+  			set_instr_to_noop(&ex_stage);
   			break;
 
   		case 2: //data hazard
 			wb_stage = mem2_stage;
   			mem2_stage = mem1_stage;
   			mem1_stage = ex_stage;
-  			set_instr_to_noop(ex_stage);
+  			set_instr_to_noop(&ex_stage);
   			//do we have to implement our own forwarding??
   			//set id_stage.reg = ex_stage.reg
   			break;
@@ -207,8 +215,8 @@ int main(int argc, char **argv)
   	// track left in pipeline with is_done funciton telling if there are instructions left to pull
   	// Don't need to keep
   	
-  	if instr_left < 7:
-  	 stop pulling instr
+  	//if instr_left < 7:
+  	//stop pulling instr
 
 
 
