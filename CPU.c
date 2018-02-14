@@ -149,14 +149,25 @@ int main(int argc, char **argv)
 
   //loop while there are still instructions left
   int instr_left = 8;
+  int pc = 0; //attempt to use PC to detect same instruction infinite loop
   while(instr_left){
   	fprintf(stdout, "cycle number: %d", cycle_number);
   	cycle_number++; //increase the cycle number
 
   	if(trace_view_on){
   		//sends the stage and cycle number of each wb stage that has finished
-  		fprintf(stdout, "\nprint the finished instruction \n");
+  		fprintf(stdout, "\n");
   		print_finished_instr(wb_stage, cycle_number);
+  	}
+
+
+  	//attempt to use PC to detect same instruction infinite loop
+  	int tempPC = wb_stage->PC;
+  	if(pc == tempPC && wb_stage->type != ti_NOP){
+  		fprintf(stdout, "INFINITE LOOP ERROR: %d = %d", pc, tempPC);
+  		exit(0);
+  	}else{
+  		pc = tempPC;
   	}
 
   	
@@ -239,6 +250,10 @@ int main(int argc, char **argv)
   			set_instr_to_noop(if1_stage);
   			set_instr_to_noop(if2_stage);
   			set_instr_to_noop(id_stage);
+  			//need to move the rest of them up
+  			wb_stage = mem2_stage;
+  			mem2_stage = mem1_stage;
+  			mem1_stage = ex_stage;
   			break;
 
   	}
