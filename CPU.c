@@ -51,6 +51,47 @@ print_finished_instr(struct trace_item* instr, int cycle_number){
       }
 }
 
+//queue that holds the instructions that were removed from the pipeline due to a jump or a branch
+typedef struct queue_entry{
+	struct trace_item entry;
+	struct queue_entry* next;
+	struct queue_entry* prev;
+} queue_entry;
+queue_entry* queue_start = 0;
+queue_entry* queue_end = 0;
+int queue_size = 0;
+
+//add instruction to the queue
+void add_queue_instr(struct trace_item* instr){
+	queue_entry* new_entry = (queue_entry*) malloc(sizeof(queue_entry));
+	new_entry->entry = *instr;
+	new_entry->next = queue_start;
+	new_entry->prev = 0;
+	queue_entry* old_start = queue_start;
+	queue_start = new_entry;
+	//sets the start and end to the same thing when there is no queue left
+	if(queue_size == 0){
+		queue_end = queue_start;
+	}else{
+		old_start->prev = queue_start;
+	}
+	queue_size += 1;
+}
+
+//remove from the queue
+int remove_queue_instr(struct trace_item* instr){
+	if(queue_end == NULL){
+		return 0;
+	}
+	*instr = queue_end->entry;
+	queue_entry* new_end = queue_end->prev;
+	free(queue_end);
+	queue_end = new_end;
+	queue_size -= 1;
+	return 1;
+}
+
+
 //sets an instruction to a no-op
 void set_instr_to_noop(struct trace_item* instruction){
 	instruction = malloc(sizeof(struct trace_item));
@@ -80,12 +121,12 @@ int main(int argc, char **argv)
   	branch_prediction_method = 0;
   }else if(argc == 4){
   	trace_file_name = argv[1];
-  	trace_view_on = atoi(argv[2]);
-  	branch_prediction_method = atoi(argv[3]); //might need a ? : operator here. unsure though
+  	branch_prediction_method = atoi(argv[2]); //might need a ? : operator here. unsure though
+  	trace_view_on = atoi(argv[3]);
   }else{
     fprintf(stdout, "\nUSAGE: tv <trace_file> <switch - any character> <branch_prediction - 0|1|2>\n");
-    fprintf(stdout, "\n(switch) to turn on or off individual item view.\n");
     fprintf(stdout, "\n(branch_prediction) 0 - no branch prediction, 1 - one bit branch prediction, 2 - two bit branch prediction \n\n");
+    fprintf(stdout, "\n(switch) to turn on or off individual item view.\n");
     exit(0);
   }
   
@@ -141,8 +182,7 @@ int main(int argc, char **argv)
   set_instr_to_noop(wb_stage);
   fprintf(stdout, "end of the initialization\n");
 
-  int hazard = 0; //initializes a no hazard state. will change based on branch detection and stuff
-
+  
 
   //TODO do we need branch table stuff????? if so initialize here I guess
 
@@ -151,27 +191,32 @@ int main(int argc, char **argv)
   int instr_left = 8;
   int pc = 0; //attempt to use PC to detect same instruction infinite loop
   while(instr_left){
-  	fprintf(stdout, "cycle number: %d", cycle_number);
   	cycle_number++; //increase the cycle number
+  	int hazard = 0; //initializes a no hazard state. will change based on branch detection and stuff
+
 
   	if(trace_view_on){
   		//sends the stage and cycle number of each wb stage that has finished
   		fprintf(stdout, "\n");
+  		print_finished_instr(if1_stage, cycle_number);
+  		print_finished_instr(if2_stage, cycle_number);
+  		print_finished_instr(id_stage, cycle_number);
+  		print_finished_instr(ex_stage, cycle_number);
+  		print_finished_instr(mem1_stage, cycle_number);
+  		print_finished_instr(mem2_stage, cycle_number);
   		print_finished_instr(wb_stage, cycle_number);
   	}
 
 
   	//attempt to use PC to detect same instruction infinite loop
   	int tempPC = wb_stage->PC;
-  	if(pc == tempPC && wb_stage->type != ti_NOP){
+  	if(pc == tempPC && (wb_stage->type == ti_JRTYPE || wb_stage->type == ti_JTYPE || wb_stage->type == ti_BRANCH || wb_stage->type == ti_LOAD)){
   		fprintf(stdout, "INFINITE LOOP ERROR: %d = %d", pc, tempPC);
   		exit(0);
   	}else{
   		pc = tempPC;
   	}
 
-  	
-  	//TODO: some branch detection shit. lots of loops and conditions
 
 
     //detect structural hazards
@@ -195,51 +240,61 @@ int main(int argc, char **argv)
     
     
     
-    //detect control hazards
-    if(ex_stage->type == ti_JTYPE || ex_stage->type == ti_BRANCH){
+    //detect jump control hazards
+    if(ex_stage->type == ti_JTYPE || ex_stage->type == ti_JRTYPE){
     	hazard = 3;
-    	fprintf(stdout, "\ncontrol hazard detected \n");
+    	fprintf(stdout, "\njump control hazard detected \n");
 
     }
 
+    //detect branch control hazards
+    if(ex_stage->type == ti_BRANCH){
+    	fprintf(stdout, "\nbranch control hazard detected: ");
+
+    	if(branch_prediction_method == 0){
+    		if(ex_stage->PC + 4 != id_stage->PC){
+    			hazard = 3; //incorrect no prediction
+    			fprintf(stdout, "incorrect default (not taken) prediction\n");
+    		}
+    	}else if(branch_prediction_method == 1){
+
+    	}else if(branch_prediction_method == 2){
+
+    	}
+    }
+
+
+
+    //moved these here since they are common across all hazards
+    wb_stage = mem2_stage;
+  	mem2_stage = mem1_stage;
+  	mem1_stage = ex_stage;
 
 
   	//hazard switching
   	switch(hazard){
   		case 0: //no hazard
   			//TODO
-  			wb_stage = mem2_stage;
-  			mem2_stage = mem1_stage;
-  			mem1_stage = ex_stage;
   			ex_stage = id_stage;
   			id_stage = if2_stage;
   			if2_stage = if1_stage;
   			if1_stage = new_instr;
-  			if (instr_left >= 8) {
-  			    int is_done = trace_get_item(&new_instr);
-      			if (is_done == 0) {
-      			    instr_left -= 1;
-      			    set_instr_to_noop(new_instr);
-      			}
-  			} else {
-  			    instr_left -= 1;
-  			    set_instr_to_noop(new_instr);
+
+  			//get next instr, if none decrement the instr_left
+  			if(!trace_get_item(&new_instr)){
+  				instr_left -= 1;
+  				set_instr_to_noop(new_instr);
   			}
+
   			break;
 
   		case 1: //structural hazard
   			//move up ex, mem1, mem2, and wb
   			//dont change if1, if2, and id, and don't fetch a new instruction
-			wb_stage = mem2_stage;
-  			mem2_stage = mem1_stage;
-  			mem1_stage = ex_stage;
   			set_instr_to_noop(ex_stage);
   			break;
 
   		case 2: //data hazard
-			wb_stage = mem2_stage;
-  			mem2_stage = mem1_stage;
-  			mem1_stage = ex_stage;
   			set_instr_to_noop(ex_stage);
   			//do we have to implement our own forwarding??
   			//set id_stage.reg = ex_stage.reg
@@ -247,14 +302,28 @@ int main(int argc, char **argv)
 
   		case 3: //control hazard
   			//flush IF1, IF2, and ID
+  			add_queue_instr(if1_stage);
+  			add_queue_instr(if2_stage);
+  			add_queue_instr(id_stage);
+
   			set_instr_to_noop(if1_stage);
   			set_instr_to_noop(if2_stage);
   			set_instr_to_noop(id_stage);
-  			//need to move the rest of them up
-  			wb_stage = mem2_stage;
-  			mem2_stage = mem1_stage;
-  			mem1_stage = ex_stage;
+
+  			ex_stage = id_stage;
+  			id_stage = if2_stage;
+  			if2_stage = if1_stage;
+  			if1_stage = new_instr;
+
+  			//get next instr, if none decrement the instr_left
+  			if(!trace_get_item(&new_instr)){
+  				instr_left -= 1;
+  				set_instr_to_noop(new_instr);
+  			}
+
   			break;
+  		default:
+  			exit(1); //exit with an error. should never hit this
 
   	}
   	
