@@ -10,12 +10,33 @@
 #include <arpa/inet.h>
 #include "CPU.h" 
 
+#define BP_ENTRIES 128     // size of branch predictor table
+
+short bp_table[BP_ENTRIES]; //1 bit branch predictor table
+
+//get from the btb table
+short get_value_from_bpt(unsigned int address){
+	unsigned int mask = 127; //how to bit mask????
+	unsigned int index = (address >> 4) & mask;
+
+	return bp_table[index];
+}
+
+
+//send to the btb table
+void set_value_to_bpt(unsigned int address, int taken){
+	unsigned int mask = 127; //how to bit mask????
+	unsigned int index = (address >> 4) & mask;
+
+	bp_table[index] = taken; //do we need the ? : thing??
+
+}
 
 
 print_finished_instr(struct trace_item* instr, int cycle_number){
 	switch(instr->type) {
         case ti_NOP:
-          printf("[cycle %d] NOP\n:",cycle_number) ;
+          printf("[cycle %d] NOP:\n",cycle_number) ;
           break;
         case ti_RTYPE:
           printf("[cycle %d] RTYPE:",cycle_number) ;
@@ -94,9 +115,9 @@ int remove_queue_instr(struct trace_item* instr){
 
 //sets an instruction to a no-op
 void set_instr_to_noop(struct trace_item* instruction){
-	instruction = malloc(sizeof(struct trace_item));
+	//instruction = malloc(sizeof(struct trace_item));
 	//memset(instruction, 0, sizeof(struct trace_item));
-//	instruction->type = ti_NOP;
+	instruction->type = ti_NOP;
 }
 
 int main(int argc, char **argv)
@@ -257,7 +278,19 @@ int main(int argc, char **argv)
     			fprintf(stdout, "incorrect default (not taken) prediction\n");
     		}
     	}else if(branch_prediction_method == 1){
-
+    		if(ex_stage->PC + 4 == id_stage->PC){//not taken
+    			if(get_value_from_bpt(ex_stage->PC) == 1){//predict taken
+    				hazard = 3;
+    				fprintf(stdout, "predicted taken when not taken\n");
+    				set_value_to_bpt(ex_stage->PC, 0);
+    			}
+    		}else{
+    			if(get_value_from_bpt(ex_stage->PC) == 0){//predict not taken
+    				hazard = 3;
+    				fprintf(stdout, "predicted not taken when taken\n");
+    				set_value_to_bpt(ex_stage->PC, 1);
+    			}
+    		}
     	}else if(branch_prediction_method == 2){
 
     	}
@@ -327,17 +360,6 @@ int main(int argc, char **argv)
 
   	}
   	
-  	// track left in pipeline with is_done funciton telling if there are instructions left to pull
-  	// Don't need to keep
-  	
-  	//if instr_left < 7:
-  	//stop pulling instr
-
-
-
-
-
-
   }
 
   printf(" Simulation terminates at cycle: %u \n\n", cycle_number);
