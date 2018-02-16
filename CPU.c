@@ -10,27 +10,44 @@
 #include <arpa/inet.h>
 #include "CPU.h" 
 
-#define BP_ENTRIES 128     // size of branch predictor table
+#define BP_ENTRIES 64     // size of branch predictor table
 
-short bp_table[BP_ENTRIES]; //1 bit branch predictor table
 
+int bp_table[BP_ENTRIES][4]; //1 bit branch predictor table 
+//[bit 1][bit 0][PC address][branch address]
+
+//**********************************************************************
+//ONE BIT BRANCH PREDICTION STUFF
 //get from the btb table
-short get_value_from_bpt(unsigned int address){
-	unsigned int mask = 127; //how to bit mask????
-	unsigned int index = (address >> 4) & mask;
-
-	return bp_table[index];
+int get_value_from_bpt(unsigned int address){
+	
+  int index = (address << 23) >> 26;
+  
+  if(bp_table[2][index] == address){
+    return bp_table[1][index];
+  }
+	
 }
-
-
 //send to the btb table
-void set_value_to_bpt(unsigned int address, int taken){
-	unsigned int mask = 127; //how to bit mask????
-	unsigned int index = (address >> 4) & mask;
+void set_value_to_bpt(unsigned int address, unsigned int dest_addr, int taken){
+  int index = (address << 23) >> 26;
 
-	bp_table[index] = taken; //do we need the ? : thing??
+  printf("index: %d, address: %d, dest_addr: %d", index, address, dest_addr);
+
+
+	bp_table[index][1] = (taken ==1) ? 1:0; //do we need the ? : thing??
+  bp_table[index][2] = address;
+  bp_table[index][3] = dest_addr;
 
 }
+//**********************************************************************
+//TWO BIT BRANCH PREDICTION STUFF
+
+
+
+
+
+//**********************************************************************
 
 
 print_finished_instr(struct trace_item* instr, int cycle_number){
@@ -72,6 +89,7 @@ print_finished_instr(struct trace_item* instr, int cycle_number){
       }
 }
 
+//**********************************************************************
 //queue that holds the instructions that were removed from the pipeline due to a jump or a branch
 typedef struct queue_entry{
 	struct trace_item entry;
@@ -112,6 +130,7 @@ int remove_queue_instr(struct trace_item* instr){
 	return 1;
 }
 
+//**********************************************************************
 
 //sets an instruction to a no-op
 void set_instr_to_noop(struct trace_item* instruction){
@@ -119,6 +138,8 @@ void set_instr_to_noop(struct trace_item* instruction){
 	//memset(instruction, 0, sizeof(struct trace_item));
 	instruction->type = ti_NOP;
 }
+
+//**********************************************************************
 
 int main(int argc, char **argv)
 {
@@ -228,7 +249,8 @@ int main(int argc, char **argv)
   		print_finished_instr(wb_stage, cycle_number);
   	}
 
-
+    //**********************************************************************
+    //DELETE THIS BEFORE SUBMISSION
   	//attempt to use PC to detect same instruction infinite loop
   	int tempPC = wb_stage->PC;
   	if(pc == tempPC && (wb_stage->type == ti_JRTYPE || wb_stage->type == ti_JTYPE || wb_stage->type == ti_BRANCH || wb_stage->type == ti_LOAD)){
@@ -237,7 +259,7 @@ int main(int argc, char **argv)
   	}else{
   		pc = tempPC;
   	}
-
+    //**********************************************************************
 
 
     //detect structural hazards
@@ -279,24 +301,24 @@ int main(int argc, char **argv)
     		}
     	}else if(branch_prediction_method == 1){
     		if(ex_stage->PC + 4 == id_stage->PC){//not taken
-    			if(get_value_from_bpt(ex_stage->PC) == 1){//predict taken
+    			//predict taken
     				hazard = 3;
     				fprintf(stdout, "predicted taken when not taken\n");
-    				set_value_to_bpt(ex_stage->PC, 0);
-    			}
+    				set_value_to_bpt(ex_stage->PC, ex_stage->Addr, 0);
+
     		}else{
-    			if(get_value_from_bpt(ex_stage->PC) == 0){//predict not taken
+    			//predict not taken
     				hazard = 3;
     				fprintf(stdout, "predicted not taken when taken\n");
-    				set_value_to_bpt(ex_stage->PC, 1);
-    			}
+    				set_value_to_bpt(ex_stage->PC, ex_stage->Addr, 1);
+    			
     		}
     	}else if(branch_prediction_method == 2){
 
     	}
     }
 
-
+    //**********************************************************************
 
     //moved these here since they are common across all hazards
     wb_stage = mem2_stage;
@@ -362,7 +384,17 @@ int main(int argc, char **argv)
   	
   }
 
-  printf(" Simulation terminates at cycle: %u \n\n", cycle_number);
+  printf("\nSimulation terminates at cycle: %u \n\n", cycle_number);
+
+  //print the branch predition table
+  printf("Branch Table printed below for debugging\n");
+  int row, col;
+  for (row = 0; row < BP_ENTRIES; row++) {
+        for (col = 0; col < 4; col++) {
+            printf("%d \t\t", bp_table[row][col]);
+        }
+        printf("\n");
+    }
 
   trace_uninit();
 
