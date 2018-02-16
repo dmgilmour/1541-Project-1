@@ -21,7 +21,7 @@ int bp_table[BP_ENTRIES][4]; //1 bit branch predictor table
 //get from the btb table
 int get_value_from_bpt_one_bit(unsigned int address){
 	
-  int index = (address << 23) >> 26;
+  int index = (address << 23) >> 26;  
   
   if(bp_table[2][index] == address){
     return bp_table[1][index];
@@ -36,6 +36,29 @@ int get_value_from_bpt_one_bit(unsigned int address){
   }
 	
 }
+
+int get_value_from_bpt_two_bit(unsigned int address){
+	
+  int index = (address << 23) >> 26;
+  
+	if (bp_table[0][index] == 0 && bp_table[1][index] == 0) {
+		//predict not taken
+		return 0;
+	} else if (bp_table[0][index] == 0 && bp_table[1][index] == 1) {
+		//predict not taken, miss predicted once
+		return 1;
+	} else if (bp_table[0][index] == 1 && bp_table[1][index] == 1) {
+		//predict taken
+		return 3;
+	} else if (bp_table[0][index] == 1 && bp_table[1][index] == 0) {
+		//predict taken, miss predicted once
+		return 2;
+	} else {
+		
+	}
+	
+}
+
 //send to the btb table
 void set_value_bpt_one_bit(unsigned int address, unsigned int dest_addr, int taken){
   int index = (address << 23) >> 26;
@@ -324,11 +347,45 @@ int main(int argc, char **argv)
     		}
     	}else if(branch_prediction_method == 2){
     		if(ex_stage->PC + 4 != id_stage->PC){ //not taken
-    			//predicted taken
-
+    			//predicted taken (1st miss prediction)
+				if (get_value_from_bpt_two_bit(ex_stage->PC) == 3) {
+					hazard = 3;
+					fprintf(stdout, "predicted taken when not taken (1st miss)");
+					set_value_bpt_two_bit(ex_stage->PC, ex_stage->Addr, 1, 0);
+				}
+				//predicted taken (2nd time, change prediction)
+				if (get_value_from_bpt_two_bit(ex_stage->PC) == 2) {
+					hazard = 3;
+					fprintf(stdout, "predicted taken when not taken (2nd miss)");
+					set_value_bpt_two_bit(ex_stage->PC, ex_stage->Addr, 0, 0);
+				}
+				//predicted not taken (correct prediction)
+				if (get_value_from_bpt_two_bit(ex_stage->PC) == 0) {
+					//do nothing, table doesnt change
+					//set_value_bpt_two_bit(ex_stage->PC, ex_stage->Addr, 0, 0);
+					//dont set a hazard
+				}
 
     		}else{ //taken
-    			//predicted not taken
+    			//predicted not taken (1st miss prediction)
+				if (get_value_from_bpt_two_bit(ex_stage->PC) == 0){					
+					hazard = 3;
+					fprintf(stdout, "predicted not taken when taken (1st miss)");
+					set_value_bpt_two_bit(ex_stage->PC, ex_stage->Addr, 0, 1);
+				} 
+				//predicted not taken (2nd time, change prediction)
+				if (get_value_from_bpt_two_bit(ex_stage->PC) == 1){					
+					hazard = 3;
+					fprintf(stdout, "predicted not taken when taken (2nd miss)");
+					set_value_bpt_two_bit(ex_stage->PC, ex_stage->Addr, 1, 1);
+				} 
+				//predicted taken (correct prediction)
+				if (get_value_from_bpt_two_bit(ex_stage->PC) == 3){
+					//do nothing, table doesnt change
+					//set_value_bpt_two_bit(ex_stage->PC, ex_stage->Addr, 1, 1);
+					hazard = 3;
+					fprintf(stdout, "predicted taken when taken");
+				} 
     		}
     	}
     }
