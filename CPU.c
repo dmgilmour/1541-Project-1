@@ -19,23 +19,31 @@ int bp_table[BP_ENTRIES][4]; //1 bit branch predictor table
 //**********************************************************************
 //ONE BIT BRANCH PREDICTION STUFF
 //get from the btb table
-int get_value_from_bpt(unsigned int address){
+int get_value_from_bpt_one_bit(unsigned int address){
 	
   int index = (address << 23) >> 26;
   
   if(bp_table[2][index] == address){
     return bp_table[1][index];
+  }else if(bp_table[2][index] == 0){
+  	//predict not taken 
+  	//nothing has been added here
+  	return 0;
+  }else{
+  	//have to flush
+  	//made wrong prediction because they don't match and not 0
+  	return -1;
   }
 	
 }
 //send to the btb table
-void set_value_to_bpt(unsigned int address, unsigned int dest_addr, int taken){
+void set_value_bpt_one_bit(unsigned int address, unsigned int dest_addr, int taken){
   int index = (address << 23) >> 26;
 
   printf("index: %d, address: %d, dest_addr: %d", index, address, dest_addr);
 
 
-	bp_table[index][1] = (taken ==1) ? 1:0; //do we need the ? : thing??
+  bp_table[index][1] = (taken ==1) ? 1:0; //do we need the ? : thing??
   bp_table[index][2] = address;
   bp_table[index][3] = dest_addr;
 
@@ -44,7 +52,17 @@ void set_value_to_bpt(unsigned int address, unsigned int dest_addr, int taken){
 //TWO BIT BRANCH PREDICTION STUFF
 
 
+void set_value_bpt_two_bit(unsigned int address, unsigned int dest_addr, int taken1, int taken2){
+	int index = (address << 23) >> 26;
 
+	printf("index: %d, address: %d, dest_addr: %d", index, address, dest_addr);
+
+	bp_table[index][0] = (taken1 == 1) ? 1:0;
+	bp_table[index][1] = (taken2 == 1) ? 1:0;
+	bp_table[index][2] = address;
+ 	bp_table[index][3] = dest_addr;
+
+}
 
 
 //**********************************************************************
@@ -185,15 +203,6 @@ int main(int argc, char **argv)
 
   //do the trace stuff
 
-  printf("ayyo\n");
-  struct trace_item *foobar;
-  foobar = malloc(sizeof(struct trace_item));
-  printf("ayyyo\n");
-  trace_get_item(&foobar);
-  printf("ayyyyo\n");
-  print_finished_instr(foobar, cycle_number);
-  printf("ayyyyyo\n");	
-
   //pipeline instructions
   fprintf(stdout, "define the stages\n");
   struct trace_item *new_instr; //reads what will be next
@@ -301,20 +310,26 @@ int main(int argc, char **argv)
     		}
     	}else if(branch_prediction_method == 1){
     		if(ex_stage->PC + 4 == id_stage->PC){//not taken
-    			//predict taken
+    			//predicted taken
     				hazard = 3;
     				fprintf(stdout, "predicted taken when not taken\n");
-    				set_value_to_bpt(ex_stage->PC, ex_stage->Addr, 0);
+    				set_value_bpt_one_bit(ex_stage->PC, ex_stage->Addr, 0);
 
-    		}else{
-    			//predict not taken
+    		}else{ //taken
+    			//predicted not taken
     				hazard = 3;
     				fprintf(stdout, "predicted not taken when taken\n");
-    				set_value_to_bpt(ex_stage->PC, ex_stage->Addr, 1);
+    				set_value_bpt_one_bit(ex_stage->PC, ex_stage->Addr, 1);
     			
     		}
     	}else if(branch_prediction_method == 2){
+    		if(ex_stage->PC + 4 != id_stage->PC){ //not taken
+    			//predicted taken
 
+
+    		}else{ //taken
+    			//predicted not taken
+    		}
     	}
     }
 
