@@ -298,12 +298,8 @@ int main(int argc, char **argv)
     //dectects if wb is used
     //NOTE NOT SURE IF WE NEED TO CHECK MORE TYPES LIKE ITYPE AND SPECIAL
     if(wb_stage->type == ti_LOAD || wb_stage->type == ti_RTYPE || wb_stage->type == ti_ITYPE){
-        
-        //if rd at wb_stage == rs or rt at id_stage
-        if(wb_stage->dReg == id_stage->sReg_a || wb_stage->dReg == id_stage->sReg_b){
             hazard = 1;
             fprintf(stdout, "\nstructural hazard detected \n");
-        }
     }
     
     //detect data hazards
