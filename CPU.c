@@ -37,33 +37,13 @@ int get_value_from_bpt_one_bit(unsigned int address){
 	
 }
 
-int get_value_from_bpt_two_bit(unsigned int address){
-	
-  int index = (address << 23) >> 26;
-  
-	if (bp_table[0][index] == 0 && bp_table[1][index] == 0) {
-		//predict not taken
-		return 0;
-	} else if (bp_table[0][index] == 0 && bp_table[1][index] == 1) {
-		//predict not taken, miss predicted once
-		return 1;
-	} else if (bp_table[0][index] == 1 && bp_table[1][index] == 1) {
-		//predict taken
-		return 3;
-	} else if (bp_table[0][index] == 1 && bp_table[1][index] == 0) {
-		//predict taken, miss predicted once
-		return 2;
-	} else {
-		
-	}
-	
-}
+
 
 //send to the btb table
 void set_value_bpt_one_bit(unsigned int address, unsigned int dest_addr, int taken){
   int index = (address << 23) >> 26;
 
-  printf("index: %d, address: %d, dest_addr: %d", index, address, dest_addr);
+  //printf("index: %d, address: %d, dest_addr: %d", index, address, dest_addr);
 
 
   bp_table[index][1] = (taken ==1) ? 1:0; //do we need the ? : thing??
@@ -73,12 +53,32 @@ void set_value_bpt_one_bit(unsigned int address, unsigned int dest_addr, int tak
 }
 //**********************************************************************
 //TWO BIT BRANCH PREDICTION STUFF
-
+int get_value_from_bpt_two_bit(unsigned int address){
+  
+  int index = (address << 23) >> 26;
+  
+  if (bp_table[0][index] == 0 && bp_table[1][index] == 0) {
+    //predict not taken
+    return 0;
+  } else if (bp_table[0][index] == 0 && bp_table[1][index] == 1) {
+    //predict not taken, miss predicted once
+    return 1;
+  } else if (bp_table[0][index] == 1 && bp_table[1][index] == 1) {
+    //predict taken
+    return 3;
+  } else if (bp_table[0][index] == 1 && bp_table[1][index] == 0) {
+    //predict taken, miss predicted once
+    return 2;
+  } else {
+    
+  }
+  
+}
 
 void set_value_bpt_two_bit(unsigned int address, unsigned int dest_addr, int taken1, int taken2){
 	int index = (address << 23) >> 26;
 
-	printf("index: %d, address: %d, dest_addr: %d", index, address, dest_addr);
+	//printf("index: %d, address: %d, dest_addr: %d", index, address, dest_addr);
 
 	bp_table[index][0] = (taken1 == 1) ? 1:0;
 	bp_table[index][1] = (taken2 == 1) ? 1:0;
@@ -227,7 +227,7 @@ int main(int argc, char **argv)
   //do the trace stuff
 
   //pipeline instructions
-  fprintf(stdout, "define the stages\n");
+  //fprintf(stdout, "define the stages\n");
   struct trace_item *new_instr; //reads what will be next
   new_instr = malloc(sizeof(struct trace_item));
   struct trace_item *if1_stage;
@@ -245,7 +245,7 @@ int main(int argc, char **argv)
   struct trace_item *wb_stage;
   wb_stage = malloc(sizeof(struct trace_item));
   //initialize the stages to no-ops
-  fprintf(stdout, "initialize the stages\n");
+  //fprintf(stdout, "initialize the stages\n");
   set_instr_to_noop(new_instr);
   set_instr_to_noop(if1_stage);
   set_instr_to_noop(if2_stage);
@@ -254,7 +254,6 @@ int main(int argc, char **argv)
   set_instr_to_noop(mem1_stage);
   set_instr_to_noop(mem2_stage);
   set_instr_to_noop(wb_stage);
-  fprintf(stdout, "end of the initialization\n");
 
   
 
@@ -264,6 +263,7 @@ int main(int argc, char **argv)
   //loop while there are still instructions left
   int instr_left = 8;
   int pc = 0; //attempt to use PC to detect same instruction infinite loop
+  int misses = 0;
   while(instr_left){
   	cycle_number++; //increase the cycle number
   	int hazard = 0; //initializes a no hazard state. will change based on branch detection and stuff
@@ -272,26 +272,11 @@ int main(int argc, char **argv)
   	if(trace_view_on){
   		//sends the stage and cycle number of each wb stage that has finished
   		fprintf(stdout, "\n");
-  		print_finished_instr(if1_stage, cycle_number);
-  		print_finished_instr(if2_stage, cycle_number);
-  		print_finished_instr(id_stage, cycle_number);
-  		print_finished_instr(ex_stage, cycle_number);
-  		print_finished_instr(mem1_stage, cycle_number);
-  		print_finished_instr(mem2_stage, cycle_number);
   		print_finished_instr(wb_stage, cycle_number);
   	}
 
     //**********************************************************************
-    //DELETE THIS BEFORE SUBMISSION
-  	//attempt to use PC to detect same instruction infinite loop
-  	int tempPC = wb_stage->PC;
-  	if(pc == tempPC && (wb_stage->type == ti_JRTYPE || wb_stage->type == ti_JTYPE || wb_stage->type == ti_BRANCH || wb_stage->type == ti_LOAD)){
-  		fprintf(stdout, "INFINITE LOOP ERROR: %d = %d", pc, tempPC);
-  		exit(0);
-  	}else{
-  		pc = tempPC;
-  	}
-    //**********************************************************************
+ 
 
 
     //detect structural hazards
@@ -299,13 +284,13 @@ int main(int argc, char **argv)
     //NOTE NOT SURE IF WE NEED TO CHECK MORE TYPES LIKE ITYPE AND SPECIAL
     if(wb_stage->type == ti_LOAD || wb_stage->type == ti_RTYPE || wb_stage->type == ti_ITYPE){
             hazard = 1;
-            fprintf(stdout, "\nstructural hazard detected \n");
+            //fprintf(stdout, "\nstructural hazard detected \n");
     }
     
     //detect data hazards
     if(ex_stage->type == ti_LOAD && (ex_stage->dReg == id_stage->sReg_a || ex_stage->dReg == id_stage->sReg_b)){
     	hazard = 2;
-    	fprintf(stdout, "\ndata hazard detected \n");
+    	//fprintf(stdout, "\ndata hazard detected \n");
 
     }
     
@@ -314,30 +299,31 @@ int main(int argc, char **argv)
     //detect jump control hazards
     if(ex_stage->type == ti_JTYPE || ex_stage->type == ti_JRTYPE){
     	hazard = 3;
-    	fprintf(stdout, "\njump control hazard detected \n");
+    	//fprintf(stdout, "\njump control hazard detected \n");
 
     }
 
     //detect branch control hazards
     if(ex_stage->type == ti_BRANCH){
-    	fprintf(stdout, "\nbranch control hazard detected: ");
+    	//fprintf(stdout, "\nbranch control hazard detected: ");
 
     	if(branch_prediction_method == 0){
     		if(ex_stage->PC + 4 != id_stage->PC){
     			hazard = 3; //incorrect no prediction
-    			fprintf(stdout, "incorrect default (not taken) prediction\n");
+    			//fprintf(stdout, "incorrect default (not taken) prediction\n");
     		}
     	}else if(branch_prediction_method == 1){
     		if(ex_stage->PC + 4 == id_stage->PC){//not taken
     			//predicted taken
     				hazard = 3;
-    				fprintf(stdout, "predicted taken when not taken\n");
+    				//fprintf(stdout, "predicted taken when not taken\n");
     				set_value_bpt_one_bit(ex_stage->PC, ex_stage->Addr, 0);
+    				misses++;
 
     		}else{ //taken
     			//predicted not taken
     				hazard = 3;
-    				fprintf(stdout, "predicted not taken when taken\n");
+    				//fprintf(stdout, "predicted not taken when taken\n");
     				set_value_bpt_one_bit(ex_stage->PC, ex_stage->Addr, 1);
     			
     		}
@@ -346,14 +332,16 @@ int main(int argc, char **argv)
     			//predicted taken (1st miss prediction)
 				if (get_value_from_bpt_two_bit(ex_stage->PC) == 3) {
 					hazard = 3;
-					fprintf(stdout, "predicted taken when not taken (1st miss)");
+					//fprintf(stdout, "predicted taken when not taken (1st miss)");
 					set_value_bpt_two_bit(ex_stage->PC, ex_stage->Addr, 1, 0);
+					misses++;
 				}
 				//predicted taken (2nd time, change prediction)
 				if (get_value_from_bpt_two_bit(ex_stage->PC) == 2) {
 					hazard = 3;
-					fprintf(stdout, "predicted taken when not taken (2nd miss)");
+					//fprintf(stdout, "predicted taken when not taken (2nd miss)");
 					set_value_bpt_two_bit(ex_stage->PC, ex_stage->Addr, 0, 0);
+					misses++;
 				}
 				//predicted not taken (correct prediction)
 				if (get_value_from_bpt_two_bit(ex_stage->PC) == 0) {
@@ -366,21 +354,23 @@ int main(int argc, char **argv)
     			//predicted not taken (1st miss prediction)
 				if (get_value_from_bpt_two_bit(ex_stage->PC) == 0){					
 					hazard = 3;
-					fprintf(stdout, "predicted not taken when taken (1st miss)");
+					//fprintf(stdout, "predicted not taken when taken (1st miss)");
 					set_value_bpt_two_bit(ex_stage->PC, ex_stage->Addr, 0, 1);
+					misses++;
 				} 
 				//predicted not taken (2nd time, change prediction)
 				if (get_value_from_bpt_two_bit(ex_stage->PC) == 1){					
 					hazard = 3;
-					fprintf(stdout, "predicted not taken when taken (2nd miss)");
+					//fprintf(stdout, "predicted not taken when taken (2nd miss)");
 					set_value_bpt_two_bit(ex_stage->PC, ex_stage->Addr, 1, 1);
+					misses++;
 				} 
 				//predicted taken (correct prediction)
 				if (get_value_from_bpt_two_bit(ex_stage->PC) == 3){
 					//do nothing, table doesnt change
 					//set_value_bpt_two_bit(ex_stage->PC, ex_stage->Addr, 1, 1);
 					hazard = 3;
-					fprintf(stdout, "predicted taken when taken");
+					//fprintf(stdout, "predicted taken when taken");
 				} 
     		}
     	}
@@ -454,15 +444,19 @@ int main(int argc, char **argv)
 
   printf("\nSimulation terminates at cycle: %u \n\n", cycle_number);
 
-  //print the branch predition table
-  printf("Branch Table printed below for debugging\n");
-  int row, col;
-  for (row = 0; row < BP_ENTRIES; row++) {
-        for (col = 0; col < 4; col++) {
-            printf("%d \t\t", bp_table[row][col]);
-        }
-        printf("\n");
-    }
+  //**********************************************************************
+  // debugging helpers
+  // printf("\nNumber of branch table misses: %d \n\n", misses);
+
+  // //print the branch predition table
+  // printf("Branch Table printed below for debugging\n");
+  // int row, col;
+  // for (row = 0; row < BP_ENTRIES; row++) {
+  //       for (col = 0; col < 4; col++) {
+  //           printf("%d \t\t", bp_table[row][col]);
+  //       }
+  //       printf("\n");
+  //   }
 
   trace_uninit();
 
