@@ -419,6 +419,8 @@ int main(int argc, char **argv)
   			add_queue_instr(if2_stage);
   			add_queue_instr(id_stage);
 
+        
+
   			set_instr_to_noop(if1_stage);
   			set_instr_to_noop(if2_stage);
   			set_instr_to_noop(id_stage);
@@ -428,10 +430,15 @@ int main(int argc, char **argv)
   			if2_stage = if1_stage;
   			if1_stage = new_instr;
 
-  			//get next instr, if none decrement the instr_left
-  			if(!trace_get_item(&new_instr)){
+  			
+        if(remove_queue_instr(&new_instr)){
+          //need to add three "squashed" instructions afterward to get correct cycle time
+          //ADD CODE HERE
+        }else if(!trace_get_item(&new_instr)){
+          //get next instr, if none decrement the instr_left
   				instr_left -= 1;
   				set_instr_to_noop(new_instr);
+
   			}
 
   			break;
