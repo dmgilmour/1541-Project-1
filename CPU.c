@@ -431,7 +431,7 @@ int main(int argc, char **argv)
   			if1_stage = new_instr;
 
   			
-        if(remove_queue_instr(&new_instr)){
+        if(remove_queue_instr(new_instr)){
           //need to add three "squashed" instructions afterward to get correct cycle time
           //ADD CODE HERE
         }else if(!trace_get_item(&new_instr)){
