@@ -453,7 +453,7 @@ int main(int argc, char **argv)
 
   //**********************************************************************
   // debugging helpers
-  // printf("\nNumber of branch table misses: %d \n\n", misses);
+  printf("\nNumber of branch table misses: %d \n\n", misses);
 
   // //print the branch predition table
   // printf("Branch Table printed below for debugging\n");
