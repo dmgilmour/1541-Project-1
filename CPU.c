@@ -296,7 +296,7 @@ int main(int argc, char **argv)
     //detect data hazards
     if(ex_stage->type == ti_LOAD && (ex_stage->dReg == id_stage->sReg_a || ex_stage->dReg == id_stage->sReg_b)){
     	hazard = 2;
-    	fprintf(stdout, "\ndata hazard detected \n");
+    	//fprintf(stdout, "\ndata hazard detected \n");
 
     }
     
@@ -305,13 +305,13 @@ int main(int argc, char **argv)
     //detect jump control hazards
     if(ex_stage->type == ti_JTYPE || ex_stage->type == ti_JRTYPE){
     	hazard = 3;
-    	fprintf(stdout, "\njump control hazard detected \n");
+    	//fprintf(stdout, "\njump control hazard detected \n");
 
     }
 
     //detect branch control hazards
     if(ex_stage->type == ti_BRANCH){
-    	fprintf(stdout, "\nbranch control hazard detected: ");
+    	//fprintf(stdout, "\nbranch control hazard detected: ");
 
     	if(branch_prediction_method == 0){
     		if(ex_stage->PC + 4 != id_stage->PC){
