@@ -272,12 +272,12 @@ int main(int argc, char **argv)
   	if(trace_view_on){
   		//sends the stage and cycle number of each wb stage that has finished
   		fprintf(stdout, "\n");
-      print_finished_instr(if1_stage, cycle_number);
-      print_finished_instr(if2_stage, cycle_number);
-      print_finished_instr(id_stage, cycle_number);
-      print_finished_instr(ex_stage, cycle_number);
-      print_finished_instr(mem1_stage, cycle_number);
-      print_finished_instr(mem2_stage, cycle_number);
+      // print_finished_instr(if1_stage, cycle_number);
+      // print_finished_instr(if2_stage, cycle_number);
+      // print_finished_instr(id_stage, cycle_number);
+      // print_finished_instr(ex_stage, cycle_number);
+      // print_finished_instr(mem1_stage, cycle_number);
+      // print_finished_instr(mem2_stage, cycle_number);
   		print_finished_instr(wb_stage, cycle_number);
   	}
 
@@ -404,7 +404,7 @@ int main(int argc, char **argv)
           //get next instr, if none decrement the instr_left
           instr_left -= 1;
           set_instr_to_noop(new_instr);
-          fprintf(stdout, "instructinos left: %d \n", instr_left);
+          //fprintf(stdout, "instructinos left: %d \n", instr_left);
 
 
         }
@@ -446,7 +446,7 @@ int main(int argc, char **argv)
           //get next instr, if none decrement the instr_left
   				instr_left -= 1;
   				set_instr_to_noop(new_instr);
-          fprintf(stdout, "instructinos left: %d \n", instr_left);
+          //fprintf(stdout, "instructinos left: %d \n", instr_left);
 
   			}
 
