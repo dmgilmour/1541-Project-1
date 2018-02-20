@@ -21,7 +21,7 @@ int bp_table[BP_ENTRIES][4]; //1 bit branch predictor table
 //get from the btb table
 int get_value_from_bpt_one_bit(unsigned int address){
 	
-  int index = (address << 23) >> 27;  
+  int index = (address << 23) >> 25;  
   
   if(bp_table[2][index] == address){
     return bp_table[1][index];
@@ -41,7 +41,7 @@ int get_value_from_bpt_one_bit(unsigned int address){
 
 //send to the btb table
 void set_value_bpt_one_bit(unsigned int address, unsigned int dest_addr, int taken){
-  int index = (address << 23) >> 27;
+  int index = (address << 23) >> 25;
 
   //printf("index: %d, address: %d, dest_addr: %d", index, address, dest_addr);
 
@@ -55,7 +55,7 @@ void set_value_bpt_one_bit(unsigned int address, unsigned int dest_addr, int tak
 //TWO BIT BRANCH PREDICTION STUFF
 int get_value_from_bpt_two_bit(unsigned int address){
   
-  int index = (address << 23) >> 27;
+  int index = (address << 23) >> 25;
   
   if (bp_table[0][index] == 0 && bp_table[1][index] == 0) {
     //predict not taken
@@ -76,7 +76,7 @@ int get_value_from_bpt_two_bit(unsigned int address){
 }
 
 void set_value_bpt_two_bit(unsigned int address, unsigned int dest_addr, int taken1, int taken2){
-	int index = (address << 23) >> 27;
+	int index = (address << 23) >> 25;
 
 	//printf("index: %d, address: %d, dest_addr: %d", index, address, dest_addr);
 
@@ -394,10 +394,15 @@ int main(int argc, char **argv)
   			if1_stage = new_instr;
 
   			//get next instr, if none decrement the instr_left
-  			if(!trace_get_item(&new_instr)){
-  				instr_left -= 1;
-  				set_instr_to_noop(new_instr);
-  			}
+  			if(remove_queue_instr(new_instr)){
+          //need to add three "squashed" instructions afterward to get correct cycle time
+          //ADD CODE HERE
+        }else if(!trace_get_item(&new_instr)){
+          //get next instr, if none decrement the instr_left
+          instr_left -= 1;
+          set_instr_to_noop(new_instr);
+
+        }
 
   			break;
 
@@ -453,7 +458,7 @@ int main(int argc, char **argv)
 
   //**********************************************************************
   // debugging helpers
-  printf("\nNumber of branch table misses: %d \n\n", misses);
+  // printf("\nNumber of branch table misses: %d \n\n", misses);
 
   // //print the branch predition table
   // printf("Branch Table printed below for debugging\n");
