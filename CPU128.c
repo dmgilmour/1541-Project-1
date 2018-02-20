@@ -282,7 +282,7 @@ int main(int argc, char **argv)
     //detect structural hazards
     //dectects if wb is used
     //NOTE NOT SURE IF WE NEED TO CHECK MORE TYPES LIKE ITYPE AND SPECIAL
-    if(wb_stage->type == ti_LOAD || wb_stage->type == ti_RTYPE || wb_stage->type == ti_ITYPE){
+    if((wb_stage->type == ti_STORE || wb_stage->type == ti_RTYPE || wb_stage->type == ti_ITYPE) && (id_stage->type == ti_RTYPE || id_stage->type == ti_LOAD || id_stage->type == ti_ITYPE)){
             hazard = 1;
             //fprintf(stdout, "\nstructural hazard detected \n");
     }

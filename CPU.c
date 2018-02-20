@@ -272,6 +272,12 @@ int main(int argc, char **argv)
   	if(trace_view_on){
   		//sends the stage and cycle number of each wb stage that has finished
   		fprintf(stdout, "\n");
+      print_finished_instr(if1_stage, cycle_number);
+      print_finished_instr(if2_stage, cycle_number);
+      print_finished_instr(id_stage, cycle_number);
+      print_finished_instr(ex_stage, cycle_number);
+      print_finished_instr(mem1_stage, cycle_number);
+      print_finished_instr(mem2_stage, cycle_number);
   		print_finished_instr(wb_stage, cycle_number);
   	}
 
@@ -282,7 +288,7 @@ int main(int argc, char **argv)
     //detect structural hazards
     //dectects if wb is used
     //NOTE NOT SURE IF WE NEED TO CHECK MORE TYPES LIKE ITYPE AND SPECIAL
-    if(wb_stage->type == ti_LOAD || wb_stage->type == ti_RTYPE || wb_stage->type == ti_ITYPE){
+    if((wb_stage->type == ti_STORE || wb_stage->type == ti_RTYPE || wb_stage->type == ti_ITYPE) && (id_stage->type == ti_RTYPE || id_stage->type == ti_LOAD || id_stage->type == ti_ITYPE)){
             hazard = 1;
             //fprintf(stdout, "\nstructural hazard detected \n");
     }
@@ -290,7 +296,7 @@ int main(int argc, char **argv)
     //detect data hazards
     if(ex_stage->type == ti_LOAD && (ex_stage->dReg == id_stage->sReg_a || ex_stage->dReg == id_stage->sReg_b)){
     	hazard = 2;
-    	//fprintf(stdout, "\ndata hazard detected \n");
+    	fprintf(stdout, "\ndata hazard detected \n");
 
     }
     
@@ -299,13 +305,13 @@ int main(int argc, char **argv)
     //detect jump control hazards
     if(ex_stage->type == ti_JTYPE || ex_stage->type == ti_JRTYPE){
     	hazard = 3;
-    	//fprintf(stdout, "\njump control hazard detected \n");
+    	fprintf(stdout, "\njump control hazard detected \n");
 
     }
 
     //detect branch control hazards
     if(ex_stage->type == ti_BRANCH){
-    	//fprintf(stdout, "\nbranch control hazard detected: ");
+    	fprintf(stdout, "\nbranch control hazard detected: ");
 
     	if(branch_prediction_method == 0){
     		if(ex_stage->PC + 4 != id_stage->PC){
@@ -398,6 +404,8 @@ int main(int argc, char **argv)
           //get next instr, if none decrement the instr_left
           instr_left -= 1;
           set_instr_to_noop(new_instr);
+          fprintf(stdout, "instructinos left: %d \n", instr_left);
+
 
         }
 
@@ -411,8 +419,6 @@ int main(int argc, char **argv)
 
   		case 2: //data hazard
   			set_instr_to_noop(ex_stage);
-  			//do we have to implement our own forwarding??
-  			//set id_stage.reg = ex_stage.reg
   			break;
 
   		case 3: //control hazard
@@ -440,6 +446,7 @@ int main(int argc, char **argv)
           //get next instr, if none decrement the instr_left
   				instr_left -= 1;
   				set_instr_to_noop(new_instr);
+          fprintf(stdout, "instructinos left: %d \n", instr_left);
 
   			}
 
