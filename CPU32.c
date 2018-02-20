@@ -21,7 +21,7 @@ int bp_table[BP_ENTRIES][4]; //1 bit branch predictor table
 //get from the btb table
 int get_value_from_bpt_one_bit(unsigned int address){
 	
-  int index = (address << 23) >> 25;  
+  int index = (address << 23) >> 27;  
   
   if(bp_table[2][index] == address){
     return bp_table[1][index];
@@ -41,7 +41,7 @@ int get_value_from_bpt_one_bit(unsigned int address){
 
 //send to the btb table
 void set_value_bpt_one_bit(unsigned int address, unsigned int dest_addr, int taken){
-  int index = (address << 23) >> 25;
+  int index = (address << 23) >> 27;
 
   //printf("index: %d, address: %d, dest_addr: %d", index, address, dest_addr);
 
@@ -55,7 +55,7 @@ void set_value_bpt_one_bit(unsigned int address, unsigned int dest_addr, int tak
 //TWO BIT BRANCH PREDICTION STUFF
 int get_value_from_bpt_two_bit(unsigned int address){
   
-  int index = (address << 23) >> 25;
+  int index = (address << 23) >> 27;
   
   if (bp_table[0][index] == 0 && bp_table[1][index] == 0) {
     //predict not taken
@@ -76,7 +76,7 @@ int get_value_from_bpt_two_bit(unsigned int address){
 }
 
 void set_value_bpt_two_bit(unsigned int address, unsigned int dest_addr, int taken1, int taken2){
-	int index = (address << 23) >> 25;
+	int index = (address << 23) >> 27;
 
 	//printf("index: %d, address: %d, dest_addr: %d", index, address, dest_addr);
 
